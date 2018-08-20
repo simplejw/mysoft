@@ -1,0 +1,20 @@
+{
+    "name": "jin/mysoft",
+    "description": "extension for yii2",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "nemo",
+            "email": "xhwangjw@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "web\\tool\\": "web/tool",
+            "oauth\\wechat\\": "oauth/wechat"
+        }
+    }
+}
