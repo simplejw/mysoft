@@ -1,5 +1,5 @@
 <?php
-namespace sessionhelper\user;
+namespace web\tool;
 
 use Yii;
 use yii\base\Component;
