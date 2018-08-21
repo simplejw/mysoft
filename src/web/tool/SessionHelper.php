@@ -52,7 +52,7 @@ class SessionHelper extends Component
 	 * @param  integer $expire
 	 * @return void
 	 */
-	public static function writeCookie($key, $value, $encode = false, $httpOnly = true, $expire = 0)
+	public function writeCookie($key, $value, $encode = false, $httpOnly = true, $expire = 0)
 	{
 		if ($encode)
 		{
@@ -63,7 +63,7 @@ class SessionHelper extends Component
 		$cookie->name = $key;
 		$cookie->value = $value;
 		$cookie->httpOnly = $httpOnly;
-		$cookie->domain = self::domain();
+		$cookie->domain = $this->domain();
 
 		if ($expire > 0) $cookie->expire = time() + $expire;
 
