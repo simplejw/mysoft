@@ -9,8 +9,8 @@
             "email": "xhwangjw@gmail.com"
         }
     ],
-    "minimum-stability": "dev",
-    
+    "minimum-stability": "stable",
+    "require": {},
     "autoload": {
         "psr-4": {
             "web\\tool\\": "web/tool",
