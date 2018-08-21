@@ -10,7 +10,7 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {},
+    
     "autoload": {
         "psr-4": {
             "web\\tool\\": "web/tool",
