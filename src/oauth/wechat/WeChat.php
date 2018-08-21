@@ -134,7 +134,6 @@ class WeChat extends Component
 		$jsapiTicket = $this->getJsApiTicket();
 		$url = $current_url;
 	
-		//$url = "http://demo.firstshopping.com.cn/m/wechat/forward/";
 		$timestamp = time();
 		$nonceStr = $this->createNonceStr();
 		// 这里参数的顺序要按照 key 值 ASCII 码升序排序
