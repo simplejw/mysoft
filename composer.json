@@ -17,7 +17,8 @@
     "autoload": {
         "psr-4": {
             "web\\tool\\": "src/web/tool",
-            "oauth\\wechat\\": "src/oauth/wechat"
+            "oauth\\wechat\\": "src/oauth/wechat",
+            "pay\\wechat\\": "src/pay/wechat"
         }
     }
 }
