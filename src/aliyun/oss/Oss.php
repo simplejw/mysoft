@@ -1,6 +1,6 @@
 <?php
 
-namespace oauth\wechat;
+namespace aliyun\oss;
 
 use Yii;
 use yii\base\Component;

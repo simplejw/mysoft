@@ -18,7 +18,9 @@
         "psr-4": {
             "web\\tool\\": "src/web/tool",
             "oauth\\wechat\\": "src/oauth/wechat",
-            "pay\\wechat\\": "src/pay/wechat"
+            "pay\\wechat\\": "src/pay/wechat",
+            "aliyun\\oss\\": "src/aliyun/oss",
+            "aliyun\\sms\\": "src/aliyun/sms"
         }
     }
 }
