@@ -20,7 +20,8 @@
             "oauth\\wechat\\": "src/oauth/wechat",
             "pay\\wechat\\": "src/pay/wechat",
             "aliyun\\oss\\": "src/aliyun/oss",
-            "aliyun\\sms\\": "src/aliyun/sms"
+            "aliyun\\sms\\": "src/aliyun/sms",
+            "queue\\redis\\": "src/queue/redis"
         }
     }
 }
