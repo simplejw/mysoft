@@ -28,5 +28,8 @@ Configuration
             'sessionhelper' => [
                 'class' => 'web\tool\SessionHelper',
             ],
+            'tasker' => [
+                'class' => 'queue\redis\Tasker',
+            ],
         ]
     ];
