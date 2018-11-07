@@ -21,7 +21,8 @@
             "pay\\wechat\\": "src/pay/wechat",
             "aliyun\\oss\\": "src/aliyun/oss",
             "aliyun\\sms\\": "src/aliyun/sms",
-            "queue\\redis\\": "src/queue/redis"
+            "queue\\redis\\": "src/queue/redis",
+            "queue\\amqp\\": "src/queue/amqp"
         }
     }
 }
