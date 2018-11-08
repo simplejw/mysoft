@@ -31,5 +31,9 @@ Configuration
             'tasker' => [
                 'class' => 'queue\redis\Tasker',
             ],
+            'amqp' => [
+                'class' => 'queue\amqp\Tasker',
+                'exchangeName' => 'direct_logs'
+            ],
         ]
     ];
