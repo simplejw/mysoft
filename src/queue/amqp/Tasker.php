@@ -87,9 +87,9 @@ class Tasker extends Component
         }
         $this->connection = new AMQPStreamConnection($this->host, $this->port, $this->user, $this->password, $this->vhost);
         $this->channel = $this->connection->channel();
-        //$this->channel->queue_declare($this->queueName, false, true, false, false);
+        $this->channel->queue_declare($this->queueName, false, true, false, false);
         $this->channel->exchange_declare($this->exchangeName, 'direct', false, true, false);
-        //$this->channel->queue_bind($this->queueName, $this->exchangeName, $this->routing_key);
+        $this->channel->queue_bind($this->queueName, $this->exchangeName, $this->routing_key);
     }
 
     /**
