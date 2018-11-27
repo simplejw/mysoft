@@ -66,6 +66,7 @@ class Tasker extends Component
             $this->routing_key
         );
 
+        $this->close();
         return $id;
     }
 
