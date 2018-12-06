@@ -33,7 +33,13 @@ Configuration
             ],
             'amqp' => [
                 'class' => 'queue\amqp\Tasker',
-                'exchangeName' => 'direct_logs'
+                'host' => 'localhost',
+                'port' => 5672,
+                'user' => 'guest',
+                'password' => 'guest',
+                'exchangeName' => 'direct_logs',
+                'vhost' => '/',
+                'routing_key' => 'key',
             ],
         ]
     ];
