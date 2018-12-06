@@ -27,7 +27,7 @@ class Tasker extends Component
     /**
      *  @var int Sets delay for later execute.
      */
-    private $pushDelay;
+    private $pushDelay = 0;
 
     /**
      * @see Queue::isWaiting()
