@@ -28,8 +28,10 @@ Configuration
             'sessionhelper' => [
                 'class' => 'web\tool\SessionHelper',
             ],
-            'tasker' => [
+            'redisMQ' => [
                 'class' => 'queue\redis\Tasker',
+                'redis' => 'redis', // Redis connection component or its config
+                'channel' => 'queue', // Queue channel key
             ],
             'amqp' => [
                 'class' => 'queue\amqp\Tasker',
