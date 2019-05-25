@@ -2,7 +2,6 @@
 
 namespace aliyun\oss;
 
-use Yii;
 use yii\base\Component;
 use yii\base\Exception;
 use yii\helpers\Json;
@@ -17,23 +16,51 @@ class OssException extends Exception
 */
 class Oss extends Component
 {
-	public $accessKeyId; //main.php
-	public $accessKeySecret; //main.php
-    public $endpoint; //main.php
-    public $bucket;
+	public $accessKeyId;      //main.php
+	public $accessKeySecret;  //main.php
+    public $endpoint;         //main.php
+    public $bucket;           //main.php
+
+    const EXPIRATION = 86400;     //有效期一天
+    const CONTENTSIZE = 20971520; //文件最大20M
 
     public function init()
     {
     
     }
 
+    /**
+     * Param of Post Object
+     * @param $objectName ('path/fileName.jpg')
+     * @return array
+     */
+    public function postObjectParam($objectName = '')
+    {
+        $policy = $this->createPolicy($objectName);
+        $signature = $this->createSignature($policy);
+
+        $data = [];
+        $data['api_url'] = $this->bucketHost();
+        $data['OSSAccessKeyId'] = $this->accessKeyId;
+        $data['policy'] = $policy;
+        $data['Signature'] = $signature;
+        $data['key'] = $objectName;
+        $data['success_action_status'] = '200';
+
+        return $data;
+    }
+
+    /**
+     * Post Policy
+     * @return string
+     */
     public function createPolicy($object = '')
     {
-        $policy = array();
-        $policy['expiration'] = $this->getGMT(86400);
-        $policy['conditions'][] = array("eq", "\$bucket", $this->bucket);
-        $policy['conditions'][] = array("eq", "\$key", $object);
-        $policy['conditions'][] = array('content-length-range', 0, 20971520);
+        $policy = [];
+        $policy['expiration'] = $this->getGMT(self::EXPIRATION + time());
+        $policy['conditions'][] = ["eq", "\$bucket", $this->bucket];
+        $policy['conditions'][] = ["eq", "\$key", $object];
+        $policy['conditions'][] = ['content-length-range', 0, self::CONTENTSIZE];
         
         $j_res = Json::encode($policy);
         $base64policy  = base64_encode($j_res);
@@ -41,50 +68,66 @@ class Oss extends Component
         return $base64policy;
     }
 
+    /**
+     * Post Signature
+     * @return string
+     */
     public function createSignature($base64policy)
     {
         return base64_encode(hash_hmac('sha1', $base64policy, $this->accessKeySecret, true));
     }
 
+    /**
+     * Bucket Host (api_url)
+     * @return string
+     */
     public function bucketHost()
     {
-        return 'http://' . $this->bucket . '.' . $this->endpoint;
+        return 'https://' . $this->bucket . '.' . $this->endpoint;
     }
 
-    public function getGMT($addTime = 0)
+    /**
+     * ISO8601 GMT时间
+     * @param Unix时间戳
+     * @return string
+     */
+    public function getGMT($unixTime = 0)
     {
-        $timezone  = +8; //China
-        $resTime = time() + 3600*($timezone+date("I")) + $addTime;
+        $timezone = +8; //China
+        $resTime = 3600 * ($timezone + date("I")) + $unixTime;
         return gmdate("Y-m-d\TH:i:s\Z", $resTime);
     }
 
-    public function createHeaderSignature($method, $ContentMD5='', $ContentType='', $gmtdate, $object)
-    {
-        $string_to_sign = $method . "\n" . $ContentMD5 . "\n" . $ContentType . "\n" . $gmtdate . "\n" . '/' . $this->bucket . $object;
-        
-        //$string_to_sign = "DELETE\n\n\nMon, 27 Aug 2018 03:50:33 GMT\n/cn-admin/upload/1535333108.jpg";
-        $signature = base64_encode(hash_hmac('sha1', $string_to_sign, $this->accessKeySecret, true));
-        return $signature;
-    }
-
-
-     /**
-     * 获取mimetype类型
-     *
-     * @param string $object
+    /**
+     * Header Signature
      * @return string
      */
-    private function getMimeType($file = null)
+    public function createHeaderSignature($method, $gmtdate, $object, $ContentMD5='', $ContentType='')
     {
-        if (!is_null($file)) {
-            $type = MimeTypes::getMimetype($file);
-            if (!is_null($type)) {
-                return $type;
-            }
-        }
-
-        return 'application/octet-stream';
+        $signString = $method . "\n" . $ContentMD5 . "\n" . $ContentType . "\n" . $gmtdate . "\n" . '/' . $this->bucket . $object;
+        
+        //$string_to_sign = "DELETE\n\n\nMon, 27 Aug 2018 03:50:33 GMT\n/cn-admin/upload/1535333108.jpg";
+        return base64_encode(hash_hmac('sha1', $signString, $this->accessKeySecret, true));
     }
+
+    /**
+     * Header Auth Param
+     * @return string
+     */
+    public function createHeaderAuth($method, $object)
+    {
+        $header = [];
+
+        //操作的GMT时间
+        $gmtdate = gmdate('D, d M Y H:i:s \G\M\T');
+
+        $headerSignature = $this->createHeaderSignature($method, $gmtdate, $object);
+		$header['Authorization'] = 'Authorization: ' . "OSS " . $this->accessKeyId . ":" . $headerSignature;
+        $header['Date'] = 'Date: ' . $gmtdate;
+        
+        return $header;
+    }
+
 
     private function stringToSignSorted($string_to_sign)
     {

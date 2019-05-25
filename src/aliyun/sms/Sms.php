@@ -2,7 +2,6 @@
 
 namespace aliyun\sms;
 
-use Yii;
 use yii\base\Component;
 use yii\helpers\Json;
 
@@ -48,7 +47,7 @@ class Sms extends Component
         curl_close($ch);
         $result = Json::decode($result, true);
         
-        return true;
+        return $result;
 	}
 	
 	private function percentEncode($string)

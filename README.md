@@ -45,3 +45,15 @@ Configuration
             ],
         ]
     ];
+
+Usage
+
+    OSS
+    // POST表单上传参数
+    Yii::$app->oss->postObjectParam('ObjectName');
+    // Header Auth of PUT/DELETE..
+    Yii::$app->oss->createHeaderAuth('PUT/DELETE/..', 'ObjectName');
+
+    Sms
+    // 发送验证码短信
+    Yii::$app->sms->send($mobile, $template_code, ['code' => $content]);
