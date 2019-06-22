@@ -59,22 +59,32 @@ class Mini extends Component
     // code2Session get open_id and session_key
     public function codeTwoSession($js_code = '')
     {
-        $params = [];
-        $params['appid'] = $this->appID;
-        $params['secret'] = $this->appSecret;
-        $params['js_code'] = $js_code;
-        $params['grant_type'] = 'authorization_code';
+        $key = 'code2Session';
+        $res = Yii::$app->cache->get($key);
 
-        $url = $this->buildUrl(Mini::CSHOST, $params);
-
-        $token = Helper::curlContents($url);
-        $result = Json::decode($token);
-
-        if (is_array($result) && isset($result['errcode']))
+        if (empty($res)) 
         {
-            throw new MiniOAuthException('wechat login accesstoken failed ' . $result['errcode'] . ' ' . $result['errmsg']);
-        }
+            $params = [];
+            $params['appid'] = $this->appID;
+            $params['secret'] = $this->appSecret;
+            $params['js_code'] = $js_code;
+            $params['grant_type'] = 'authorization_code';
 
+            $url = $this->buildUrl(Mini::CSHOST, $params);
+
+            $token = Helper::curlContents($url);
+            $result = Json::decode($token);
+
+            if (is_array($result) && isset($result['errcode']))
+            {
+                throw new MiniOAuthException('wechat login code2Session failed ' . $result['errcode'] . ' ' . $result['errmsg']);
+            }
+
+            $result['expires_in'] = intval($result['expires_in'] * 0.8);
+
+            Yii::$app->cache->set($key, $result, $result['expires_in']);
+        }
+        
         return $result;
     }
 
