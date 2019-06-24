@@ -60,9 +60,9 @@ class Mini extends Component
     public function codeTwoSession($js_code = '')
     {
         $key = 'code2Session';
-        $res = Yii::$app->cache->get($key);
+        $result = Yii::$app->cache->get($key);
 
-        if (empty($res)) 
+        if (empty($result)) 
         {
             $params = [];
             $params['appid'] = $this->appID;
