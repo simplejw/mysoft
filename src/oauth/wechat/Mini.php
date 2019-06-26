@@ -3,15 +3,10 @@ namespace oauth\wechat;
 
 use Yii;
 use yii\base\Component;
-use yii\base\Exception;
+use yii\web\UnauthorizedHttpException;
 use yii\helpers\Json;
 
 use app\components\Helper;
-
-class MiniOAuthException extends Exception
-{
-
-}
 
 class Mini extends Component
 {
@@ -45,7 +40,7 @@ class Mini extends Component
 
             if (is_array($result) && isset($result['errcode']))
 			{
-				throw new MiniOAuthException('wechat login accesstoken failed ' . $result['errcode'] . ' ' . $result['errmsg']);
+				throw new UnauthorizedHttpException('wechat login accesstoken failed ' . $result['errcode'] . ' ' . $result['errmsg']);
             }
 
             $result['expires_in'] = intval($result['expires_in'] * 0.8);
@@ -77,7 +72,7 @@ class Mini extends Component
 
             if (is_array($result) && isset($result['errcode']))
             {
-                throw new MiniOAuthException('wechat login code2Session failed ' . $result['errcode'] . ' ' . $result['errmsg']);
+                throw new UnauthorizedHttpException('wechat login code2Session failed ' . $result['errcode'] . ' ' . $result['errmsg']);
             }
 
             $result['expires_in'] = intval($result['expires_in'] * 0.8);

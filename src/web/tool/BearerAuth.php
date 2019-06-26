@@ -3,10 +3,8 @@ namespace web\tool;
 
 use Yii;
 use yii\base\Component;
-use yii\base\ErrorException;
+use yii\base\Exception;
 use app\components\Auth;
-
-use app\models\User;
 
 class BearerAuth extends Component
 {
@@ -14,7 +12,8 @@ class BearerAuth extends Component
 
     public function init()
 	{
-
+        parent::init();
+        \Yii::$app->user->enableSession = false;
     }
 
     public function getToken()
