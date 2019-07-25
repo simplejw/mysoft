@@ -16,24 +16,7 @@ class WeChatPayException extends Exception
 
 class WePay extends Component
 {
-	/**
-	 *
-	 * 网页授权接口微信服务器返回的数据，返回样例如下
-	 * {
-	 *  "access_token":"ACCESS_TOKEN",
-	 *  "expires_in":7200,
-	 *  "refresh_token":"REFRESH_TOKEN",
-	 *  "openid":"OPENID",
-	 *  "scope":"SCOPE",
-	 *  "unionid": "o6_bmasdasdsad6_2sgVt7hMZOPfL"
-	 * }
-	 * 其中access_token可用于获取共享收货地址
-	 * openid是微信支付jsapi支付接口必须的参数
-	 * @var array
-	 */
-	public $data = array();
-	public $input = array();
-	
+
 	public $appID; //main.php
 	public $mchID; //main.php
 	public $key;
@@ -51,6 +34,8 @@ class WePay extends Component
 	const MSGURL = 'https://api.weixin.qq.com/cgi-bin/message/custom/send';
 	
 	const UNIPAYURL = "https://api.mch.weixin.qq.com/pay/unifiedorder";
+
+	const ORDERQUERY= "https://api.mch.weixin.qq.com/pay/orderquery";
 	
 	//=======【curl代理设置】===================================
 	/**
@@ -124,6 +109,32 @@ class WePay extends Component
 		
 		return $result;
 	}
+
+    /**
+     * 查询订单
+     * @param string $order_sn
+     * @param int $timeOut
+     * @return mixed
+     * @throws WeChatPayException
+     */
+	public function orderQuery($order_sn = '', $timeOut = 6)
+    {
+        if ($order_sn == '') {
+            throw new WeChatPayException("缺少商户订单号"); //商户订单号
+        }
+        $inputObj['out_trade_no'] = $order_sn;
+
+        $inputObj['appid'] = $this->appID;              //公众账号ID
+        $inputObj['mch_id'] = $this->mchID;             //商户号
+        $inputObj['nonce_str'] = $this->getNonceStr();  //随机字符串
+        $inputObj['sign'] = $this->MakeSign($inputObj); //签名
+
+        $xml = $this->ToXml($inputObj);
+        $response = $this->postXmlCurl($xml, WePay::ORDERQUERY, false, $timeOut);
+        $result = $this->CheckResponse($response);
+
+        return $result;
+    }
 	
 	/**
 	 * 以post方式提交xml到对应的接口url
