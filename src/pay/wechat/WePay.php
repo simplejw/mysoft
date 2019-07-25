@@ -20,21 +20,11 @@ class WePay extends Component
 	public $appID; //main.php
 	public $mchID; //main.php
 	public $key;
-	public $appSecret; //main.php
 	
 	public $sign_data = array();
-	
 	public $curl_timeout = 30;
-	
-	const CBHOST = '';
-	const ATURL = 'https://api.weixin.qq.com/cgi-bin/token';
-	const LOGINURL = 'https://open.weixin.qq.com/connect/oauth2/authorize';
-	const GRAPHURL = 'https://api.weixin.qq.com/sns/oauth2/access_token';
-	const USERURL = 'https://api.weixin.qq.com/cgi-bin/user/info';
-	const MSGURL = 'https://api.weixin.qq.com/cgi-bin/message/custom/send';
-	
-	const UNIPAYURL = "https://api.mch.weixin.qq.com/pay/unifiedorder";
 
+	const UNIPAYURL = "https://api.mch.weixin.qq.com/pay/unifiedorder";
 	const ORDERQUERY= "https://api.mch.weixin.qq.com/pay/orderquery";
 	
 	//=======【curl代理设置】===================================
