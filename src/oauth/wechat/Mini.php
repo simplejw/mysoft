@@ -54,32 +54,25 @@ class Mini extends Component
     // code2Session get open_id and session_key
     public function codeTwoSession($js_code = '')
     {
-        $key = 'code2Session';
-        $result = Yii::$app->cache->get($key);
+        $params = [];
+        $params['appid'] = $this->appID;
+        $params['secret'] = $this->appSecret;
+        $params['js_code'] = $js_code;
+        $params['grant_type'] = 'authorization_code';
 
-        if (empty($result)) 
+        $url = $this->buildUrl(Mini::CSHOST, $params);
+
+        $token = Helper::curlContents($url);
+        $result = Json::decode($token);
+
+        if (is_array($result) && isset($result['errcode']))
         {
-            $params = [];
-            $params['appid'] = $this->appID;
-            $params['secret'] = $this->appSecret;
-            $params['js_code'] = $js_code;
-            $params['grant_type'] = 'authorization_code';
-
-            $url = $this->buildUrl(Mini::CSHOST, $params);
-
-            $token = Helper::curlContents($url);
-            $result = Json::decode($token);
-
-            if (is_array($result) && isset($result['errcode']))
-            {
-                throw new UnauthorizedHttpException('wechat login code2Session failed ' . $result['errcode'] . ' ' . $result['errmsg']);
-            }
-
-            $result['expires_in'] = intval($result['expires_in'] * 0.8);
-
-            Yii::$app->cache->set($key, $result, $result['expires_in']);
+            throw new UnauthorizedHttpException('wechat login code2Session failed ' . $result['errcode'] . ' ' . $result['errmsg']);
         }
-        
+
+        // 自定义登录态
+        $result['login_key'] = md5($result['openid']);
+
         return $result;
     }
 
