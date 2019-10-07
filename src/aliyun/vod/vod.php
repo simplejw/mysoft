@@ -2,78 +2,106 @@
 
 namespace aliyun\vod;
 
-
 use yii\base\Component;
-use yii\base\Exception;
 
-
-class OssException extends Exception
-{
-
-}
 
 class Vod extends Component
 {
     /**
      * @var string
      */
-    private $accessKeyId = 'LTAI4FfXagsZehawf45M4Y9f';
+    public $accessKeyId = '';
 
     /**
      * @var string
      */
-    private $accessSecret = 'Icj6G6fOP3hoM6YQ2tFFFZwEZnO8r7';
+    public $accessSecret = '';
 
     /**
-     * @var string
-     */
-    protected $version = '2017-03-21';
-
-    /**
+     * 存储区域标识
      * @var string
      */
     protected $regionId = 'cn-shanghai';
 
     /**
+     * HTTP Method
      * @var string
      */
-    protected $actionName = 'GetVideoPlayAuth';
+    const HTTP_METHOD = 'GET';
 
     /**
-     * @var string
+     * 点播中心的访问域名 华东2（上海）
      */
-    protected $acceptFormat = 'JSON';
+    const VOD_HOST_SH = 'https://vod.cn-shanghai.aliyuncs.com';
+
 
     /**
-     * @var string
+     * 获取视频播放地址
+     * @param string $videoId 视频ID
+     * @param string $videoFormat 视频流格式
+     * @param int $authTimeout 播放地址过期时间,单位:秒
+     * @return string
      */
-    private $dateTimeFormat = 'Y-m-d\TH:i:s\Z';
-
-    /**
-     * @var string
-     */
-    protected $method = 'GET';
-
-
-    public function init()
+    public function getPlayInfo($videoId = '', $videoFormat = '', $authTimeout = 3600)
     {
+        $apiParams = $this->pubParams();
 
+        $apiParams['Action']           = 'GetPlayInfo';
+        $apiParams['VideoId']          = $videoId;
+        $apiParams['AuthTimeout']      = $authTimeout;
+
+        if (in_array($videoFormat, ['mp4', 'm3u8', 'mp3', 'mpd'])) {
+            $apiParams['Formats']      = $videoFormat;
+        }
+
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
     }
 
-    public function composeUrl()
+    /**
+     * 获取视频播放凭证
+     * @param string $videoId 视频ID
+     * @return string
+     */
+    public function getPlayAuth($videoId = '')
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']           = 'GetVideoPlayAuth';
+        $apiParams['VideoId']          = $videoId;
+        // 播放凭证过期时间。取值范围：100~3000。
+        $apiParams['AuthInfoTimeout']  = 100;
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
+
+    /**
+     * 公共请求参数
+     * @return mixed
+     */
+    public function pubParams()
     {
         $apiParams['RegionId']         = $this->regionId;
         $apiParams['AccessKeyId']      = $this->accessKeyId;
-        $apiParams['Format']           = $this->acceptFormat;
+        $apiParams['Format']           = 'JSON';
         $apiParams['SignatureMethod']  = $this->getSignatureMethod();
         $apiParams['SignatureVersion'] = $this->getSignatureVersion();
 
         $apiParams['SignatureNonce'] = md5(uniqid(mt_rand(), true));
         $apiParams['Timestamp']      = $this->requestGMDate();
-        $apiParams['Action']         = $this->actionName;
-        $apiParams['Version']        = $this->version;
-
-        $apiParams['Signature'] = $this->computeSignature($apiParams, $this->accessSecret);
+        $apiParams['Version']        = '2017-03-21';
 
         return $apiParams;
     }
@@ -94,7 +122,7 @@ class Vod extends Component
             $canonicalizedQueryString .= '&' . $this->percentEncode($key) . '=' . $this->percentEncode($value);
         }
         $stringToBeSigned =
-            $this->method . '&%2F&' . $this->percentEncode(substr($canonicalizedQueryString, 1));
+            self::HTTP_METHOD . '&%2F&' . $this->percentEncode(substr($canonicalizedQueryString, 1));
         return $this->signString($stringToBeSigned, $accessKeySecret . '&');
     }
 
@@ -148,8 +176,44 @@ class Vod extends Component
      */
     public function requestGMDate()
     {
-        return gmdate($this->dateTimeFormat);
+        return gmdate('Y-m-d\TH:i:s\Z');
+    }
+
+    /**
+     * 通过http请求数据
+     * @access public
+     * @param  string $url 网址
+     * @param  string $method 请求方式 默认GET
+     * @param  array  $args 请求参数
+     * @param  array  $header 头部
+     * @param  integer $timeout 超时时间 默认30秒
+     * @return string
+     */
+    public function curlContents($url, $method = 'GET', $args = array(), $header = array(), $timeout = 30)
+    {
+        $response = '';
+
+        if (filter_var($url, FILTER_VALIDATE_URL))
+        {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36');
+
+            if ($method == 'POST')
+            {
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $args);
+            }
+
+            $response = curl_exec($ch);
+            curl_close($ch);
+        }
+
+        return $response;
     }
 
 }
-?>
