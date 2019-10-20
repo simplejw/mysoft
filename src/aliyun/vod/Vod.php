@@ -3,7 +3,7 @@
 namespace aliyun\vod;
 
 use yii\base\Component;
-
+use aliyun\vod\Oss;
 
 class Vod extends Component
 {
@@ -34,6 +34,82 @@ class Vod extends Component
      */
     const VOD_HOST_SH = 'https://vod.cn-shanghai.aliyuncs.com';
 
+
+    /**
+     * 未完待续
+     * @param string $objectName
+     * @param string $uploadAddress
+     * @param string $authData
+     * @return array
+     */
+    public function postObjectParam($objectName = '', $uploadAddress = '', $authData = '')
+    {
+        $uploadAddressArr = json_decode(base64_decode($uploadAddress), true);
+        $authArrData      = json_decode(base64_decode($authData), true);
+
+        $endPoint = str_replace("https://", '', $uploadAddressArr['Endpoint']);
+        $oss = new Oss($authArrData['AccessKeyId'], $authArrData['AccessKeySecret'], $uploadAddressArr['Bucket'], $endPoint);
+        $res = $oss->postObjectParam($uploadAddressArr['FileName']);
+
+        return $res;
+    }
+
+    /**
+     * 刷新视频上传凭证
+     * @param string $videoId 视频ID
+     * @return string
+     */
+    public function refreshUploadVideo($videoId = '')
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']      = 'RefreshUploadVideo';
+        $apiParams['VideoId']       = $videoId;
+
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
+
+    /**
+     * 获取视频上传地址和凭证
+     * @param string $title 视频标题
+     * @param string $fileName 视频源文件名 必须带扩展名
+     * @param string $coverURL 自定义视频封面URL地址
+     * @param string $description 视频描述 长度不超过1024个字符或汉字
+     * @param int $catId 视频分类ID
+     * @param array $tags 视频标签 最多不超过16个标签
+     *
+     * @return string 有效期为3000秒
+     */
+    public function getUploadAuth($title = '', $fileName = '', $coverURL = '', $description = '', $catId = 0, $tags = [])
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']      = 'CreateUploadVideo';
+        $apiParams['Title']       = $title;
+        $apiParams['FileName']    = $fileName;
+        $apiParams['Description'] = $description;
+        $apiParams['CoverURL']    = $coverURL;
+        if (intval($catId) !== 0) {
+            $apiParams['CateId']  = intval($catId);
+        }
+        $apiParams['Tags']        = empty($tags) ? '' : implode(",", $tags);
+
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
 
     /**
      * 获取视频播放地址
