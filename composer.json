@@ -22,6 +22,7 @@
             "aliyun\\oss\\": "src/aliyun/oss",
             "aliyun\\sms\\": "src/aliyun/sms",
             "aliyun\\vod\\": "src/aliyun/vod",
+            "aliyun\\sts\\": "src/aliyun/sts",
             "queue\\redis\\": "src/queue/redis",
             "queue\\amqp\\": "src/queue/amqp"
         }
