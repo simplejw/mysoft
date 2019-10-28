@@ -1,68 +1,119 @@
 <?php
 
+/**
+ * 阿里云对象存储服务（Object Storage Service，简称OSS）
+ */
+
 namespace aliyun\vod;
 
-use yii\helpers\Json;
 
 class Oss
 {
     public $accessKeyId;
     public $accessKeySecret;
+    public $securityToken;
+    public $expiration;
+
     public $endpoint;
     public $bucket;
+    public $objectName;
 
-    const EXPIRATION = 86400;     //有效期一天
-    const CONTENTSIZE = 209715200; //文件最大20M
 
-    public function __construct($accessKeyId = '', $accessKeySecret = '',  $bucket = '', $endpoint = '')
+    public function __construct(
+        $accessKeyId = '',
+        $accessKeySecret = '',
+        $securityToken = '',
+        $bucket = '',
+        $endpoint = '',
+        $objectName = '',
+        $expiration = ''
+    )
     {
         $this->accessKeyId     = $accessKeyId;
         $this->accessKeySecret = $accessKeySecret;
+        $this->securityToken   = $securityToken;
+        $this->expiration      = $expiration;
+
         $this->endpoint        = $endpoint;
         $this->bucket          = $bucket;
+        $this->objectName      = $objectName;
     }
 
     /**
-     * Param of Post Object
-     * @param $objectName ('path/fileName.jpg')
+     * PutObject接口用于上传文件（Object必须以正斜线/开头）
+     * @param string $objectName
      * @return array
      */
-    public function postObjectParam($objectName = '')
+    public function putObjectParam($objectName = '')
+    {
+        $authHeader = $this->createHeaderAuth('PUT', $objectName);
+        $authHeader['Cache-Control'] = 'no-cache';
+
+        $authHeader['hostPath'] = $this->bucketHost() . $objectName;
+
+        return $authHeader;
+    }
+
+    /**
+     * PostObject使用HTML表单上传Object到指定Bucket(表单域中file必须是最后一个, Object不能以正斜线（/）或者反斜线（\）开头)
+     * @param string $objectName
+     * @param string $redirect 上传成功后客户端跳转到的URL,如果未指定该表单域，返回结果由success_action_status表单域指定,并不进行跳转。
+     * @return mixed
+     */
+    public function postObjectParam($objectName = '', $redirect = '')
     {
         $policy = $this->createPolicy($objectName);
         $signature = $this->createSignature($policy);
 
-        $data = [];
-        $data['api_url'] = $this->bucketHost();
+        $data['apiHost'] = $this->bucketHost();
         $data['OSSAccessKeyId'] = $this->accessKeyId;
         $data['policy'] = $policy;
         $data['Signature'] = $signature;
         $data['key'] = $objectName;
         $data['success_action_status'] = '200';
+        if ($redirect !== '') {
+            $data['success_action_redirect'] = $redirect;
+        }
 
         return $data;
     }
 
     /**
-     * Post Policy
+     * DeleteObject用于删除某个文件（Object,无论要删除的Object是否存在,删除成功后均会返回204状态码）
+     * @param string $objectName
+     * @return array
+     */
+    public function deleteObject($objectName = '')
+    {
+        $authHeader = $this->createHeaderAuth('DELETE', $objectName);
+
+        $authHeader['hostPath'] = $this->bucketHost() . $objectName;
+
+        return $authHeader;
+    }
+
+    /**
+     * Post Policy(HTML表单上传Object)
      * @return string
      */
     public function createPolicy($object = '')
     {
-        $policy = [];
-        $policy['expiration'] = $this->getGMT(self::EXPIRATION + time());
+        $expiration = 3600;     //有效期一小时
+        $maxSize    = 209715200; //文件最大200M
+
+        $policy['expiration']   = $this->getGMT($expiration + time());
         $policy['conditions'][] = ["eq", "\$bucket", $this->bucket];
         $policy['conditions'][] = ["eq", "\$key", $object];
-        $policy['conditions'][] = ['content-length-range', 0, self::CONTENTSIZE];
+        $policy['conditions'][] = ['content-length-range', 0, $maxSize];
 
-        $j_res = Json::encode($policy);
+        $j_res = json_encode($policy);
         $base64policy  = base64_encode($j_res);
 
         return $base64policy;
     }
 
     /**
-     * Post Signature
+     * Post Signature(HTML表单上传Object)
      * @return string
      */
     public function createSignature($base64policy)
@@ -71,7 +122,7 @@ class Oss
     }
 
     /**
-     * Bucket Host (api_url)
+     * Bucket Host
      * @return string
      */
     public function bucketHost()
@@ -92,20 +143,31 @@ class Oss
     }
 
     /**
-     * Header Signature
+     * 计算签名头字符串
+     * @param $method
+     * @param $gmtdate
+     * @param $object
+     * @param string $ContentMD5
+     * @param string $ContentType
      * @return string
      */
     public function createHeaderSignature($method, $gmtdate, $object, $ContentMD5='', $ContentType='')
     {
-        $signString = $method . "\n" . $ContentMD5 . "\n" . $ContentType . "\n" . $gmtdate . "\n" . '/' . $this->bucket . $object;
+        $signString = $method . "\n" .
+            $ContentMD5  . "\n" .
+            $ContentType . "\n" .
+            $gmtdate     . "\n" .
+            '/' . $this->bucket . $object;
 
         //$string_to_sign = "DELETE\n\n\nMon, 27 Aug 2018 03:50:33 GMT\n/cn-admin/upload/1535333108.jpg";
         return base64_encode(hash_hmac('sha1', $signString, $this->accessKeySecret, true));
     }
 
     /**
-     * Header Auth Param
-     * @return string
+     * 获取授权头
+     * @param $method HTTP请求的Method
+     * @param $object
+     * @return array
      */
     public function createHeaderAuth($method, $object)
     {
@@ -115,8 +177,8 @@ class Oss
         $gmtdate = gmdate('D, d M Y H:i:s \G\M\T');
 
         $headerSignature = $this->createHeaderSignature($method, $gmtdate, $object);
-        $header['Authorization'] = 'Authorization: ' . "OSS " . $this->accessKeyId . ":" . $headerSignature;
-        $header['Date'] = 'Date: ' . $gmtdate;
+        $header['Authorization'] = "OSS " . $this->accessKeyId . ":" . $headerSignature;
+        $header['Date'] = $gmtdate;
 
         return $header;
     }

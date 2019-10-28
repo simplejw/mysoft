@@ -42,14 +42,33 @@ class Vod extends Component
      * @param string $authData
      * @return array
      */
-    public function postObjectParam($objectName = '', $uploadAddress = '', $authData = '')
+    public function formatResponseData($response = '')
     {
-        $uploadAddressArr = json_decode(base64_decode($uploadAddress), true);
-        $authArrData      = json_decode(base64_decode($authData), true);
+        $responseArr = json_decode($response, true);
 
-        $endPoint = str_replace("https://", '', $uploadAddressArr['Endpoint']);
-        $oss = new Oss($authArrData['AccessKeyId'], $authArrData['AccessKeySecret'], $uploadAddressArr['Bucket'], $endPoint);
-        $res = $oss->postObjectParam($uploadAddressArr['FileName']);
+        $uploadAddressArr = json_decode(base64_decode($responseArr['UploadAddress']), true);
+        $uploadAuthArr    = json_decode(base64_decode($responseArr['UploadAuth']), true);
+
+        $endPoint   = str_replace("https://", '', $uploadAddressArr['Endpoint']);
+        $bucket     = $uploadAddressArr['Bucket'];
+        $objectName = $uploadAddressArr['FileName'];
+
+        $accessKeyId     = $uploadAuthArr['AccessKeyId'];
+        $accessKeySecret = $uploadAuthArr['AccessKeySecret'];
+        $securityToken   = $uploadAuthArr['SecurityToken'];
+        $expireUTCTime   = $uploadAuthArr['ExpireUTCTime'];
+        $expiration      = $uploadAuthArr['Expiration'];
+        $region          = $uploadAuthArr['Region'];
+
+        $oss = new Oss(
+            $accessKeyId,
+            $accessKeySecret,
+            $securityToken,
+            $bucket,
+            $endPoint,
+            $objectName,
+            $expiration
+        );
 
         return $res;
     }
