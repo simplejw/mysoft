@@ -36,15 +36,163 @@ class Vod extends Component
 
 
     /**
-     * 未完待续
-     * @param string $objectName
-     * @param string $uploadAddress
-     * @param string $authData
+     * 通过视频ID批量获取视频信息
+     * @param array $videoIds 视频ID列表。多个用逗号分隔，最多支持20个。
+     * @return string
+     */
+    public function getVideoInfos($videoIds = [])
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']      = 'GetVideoInfos';
+        $apiParams['VideoIds']      = implode(",", $videoIds);
+
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
+
+
+    /**
+     * 修改视频信息
+     * @param string $videoId
+     * @param string $title
+     * @param string $coverURL
+     * @param string $description
+     * @param int $catId
+     * @param array $tags
+     * @return string
+     */
+    public function updateVideoInfo($videoId = '', $title = '', $coverURL = '', $description = '', $catId = 0, $tags = [])
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']    = 'UpdateVideoInfo';
+        $apiParams['VideoId']   = $videoId;
+
+        $title       === '' ?  : $apiParams['Title']       = $title;
+        $coverURL    === '' ?  : $apiParams['CoverURL']    = $coverURL;
+        $description === '' ?  : $apiParams['Description'] = $description;
+        $catId       === 0  ?  : $apiParams['CateId']      = intval($catId);
+        empty($tags)        ?  : $apiParams['Tags']        = implode(",", $tags);
+
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
+
+    /**
+     * 获取视频信息列表
+     * @param int $pageNo
+     * @param int $pageSize
+     * @param string $status
+     * @param string $startTime
+     * @param string $endTime
+     * @param int $cateId
+     * @return string
+     */
+    public function getVideoList($pageNo = 1, $pageSize = 10, $status = 'Normal', $startTime = '', $endTime = '', $cateId = 0)
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']      = 'GetVideoList';
+        $apiParams['Status']      = $status;
+        $apiParams['StartTime']   = $startTime === '' ? '2019-01-11T12:00:00Z' : $startTime;
+        $apiParams['EndTime']     = $endTime === '' ? $this->requestGMDate() : $endTime;
+        if ($cateId > 0) {
+            $apiParams['CateId']      = $cateId;
+        }
+        $apiParams['PageNo']          = $pageNo;
+        $apiParams['PageSize']        = $pageSize;
+        $apiParams['SortBy']          = 'CreationTime:Desc';
+
+        // 签名结果串。
+        $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
+
+    /**
+     * 新增视频
+     * @param string $newFilePath
+     * @param string $title
+     * @param string $fileName
+     * @param string $coverURL
+     * @param string $description
+     * @param int $catId
+     * @param array $tags
      * @return array
      */
-    public function formatResponseData($response = '')
+    public function addVideo($newFilePath = '', $title = '', $fileName = '', $coverURL = '', $description = '', $catId = 0, $tags = [])
     {
-        $responseArr = json_decode($response, true);
+        $authData = $this->getUploadAuth($title, $fileName, $coverURL, $description, $catId, $tags);
+        $ossHttpCode = $this->putObject($authData, $newFilePath);
+
+        $responseArr = json_decode($authData, true);
+        $newVideoId = isset($responseArr['VideoId']) ? $responseArr['VideoId'] : '';
+
+        return [
+            'videoId' => $newVideoId,
+            'ossHttpCode' => $ossHttpCode,
+            'isSuccess' => $ossHttpCode == 200 ? true : false
+        ];
+    }
+
+    /**
+     * 更新视频
+     * @param string $oldVideoId
+     * @param string $newFilePath
+     * @return array
+     */
+    public function updateVideo($oldVideoId = '', $newFilePath = '')
+    {
+        $authData = $this->refreshUploadVideo($oldVideoId);
+        $ossHttpCode = $this->putObject($authData, $newFilePath);
+
+        return [
+            'videoId' => $oldVideoId,
+            'ossHttpCode' => $ossHttpCode,
+            'isSuccess' => $ossHttpCode == 200 ? true : false
+        ];
+    }
+
+    /**
+     * 上传点播视频(OSS,PUT上传)
+     * @param string $authData
+     * @param string $filePath
+     * @return array
+     */
+    public function putObject($authData = '', $filePath = '')
+    {
+        $oss = $this->createOssRequest($authData);
+
+        $res = $oss->putObject($filePath);
+
+        return $res;
+    }
+
+    /**
+     * 创建oss上传类
+     * @param string $authData
+     * @return \aliyun\vod\Oss
+     */
+    public function createOssRequest($authData = '')
+    {
+        $responseArr = json_decode($authData, true);
 
         $uploadAddressArr = json_decode(base64_decode($responseArr['UploadAddress']), true);
         $uploadAuthArr    = json_decode(base64_decode($responseArr['UploadAuth']), true);
@@ -70,7 +218,7 @@ class Vod extends Component
             $expiration
         );
 
-        return $res;
+        return $oss;
     }
 
     /**

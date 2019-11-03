@@ -22,14 +22,16 @@ class Oss extends Component
      * @param string $objectName
      * @return array
      */
-    public function putObjectParam($objectName = '')
+    public function putObject($objectName = '', $filePath = '')
     {
         $authHeader = $this->createHeaderAuth('PUT', $objectName);
-        $authHeader['Cache-Control'] = 'no-cache';
+        $authHeader['Cache-Control'] = 'Cache-Control: ' . 'no-cache';
 
-        $authHeader['hostPath'] = $this->bucketHost() . $objectName;
+        $hostPath = $this->bucketHost() . $objectName;
 
-        return $authHeader;
+        $response = $this->curlContents($hostPath, 'PUT', [$filePath], $authHeader);
+
+        return $response;
     }
 
     /**
@@ -155,35 +157,59 @@ class Oss extends Component
         $gmtdate = gmdate('D, d M Y H:i:s \G\M\T');
 
         $headerSignature = $this->createHeaderSignature($method, $gmtdate, $object);
-		$header['Authorization'] = "OSS " . $this->accessKeyId . ":" . $headerSignature;
-        $header['Date'] = $gmtdate;
+		$header['Authorization'] = 'Authorization: ' . "OSS " . $this->accessKeyId . ":" . $headerSignature;
+        $header['Date'] = 'Date: ' . $gmtdate;
         
         return $header;
     }
 
 
-    private function stringToSignSorted($string_to_sign)
+    /**
+     * 通过http请求数据
+     * @access public
+     * @param  string $url 网址
+     * @param  string $method 请求方式 默认GET
+     * @param  array  $args 请求参数
+     * @param  array  $header 头部
+     * @param  integer $timeout 超时时间 默认30秒
+     * @return string
+     */
+    public function curlContents($url, $method = 'GET', $args = [], $header = [], $timeout = 30)
     {
-        $queryStringSorted = '';
-        $explodeResult = explode('?', $string_to_sign);
-        $index = count($explodeResult);
-        if ($index === 1)
-            return $string_to_sign;
+        $response = '';
 
-        $queryStringParams = explode('&', $explodeResult[$index - 1]);
-        sort($queryStringParams);
-
-        foreach($queryStringParams as $params)
+        if (filter_var($url, FILTER_VALIDATE_URL))
         {
-             $queryStringSorted .= $params . '&';    
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLINFO_HEADER_OUT, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36');
+
+            if ($method == 'POST')
+            {
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $args);
+            }
+
+            if ($method == 'PUT')
+            {
+                $handle = fopen($args[0], 'rb');
+                curl_setopt($ch, CURLOPT_PUT, true); //设置为PUT请求
+                curl_setopt($ch, CURLOPT_INFILE, $handle);  //设置资源句柄
+            }
+
+            $response = curl_exec($ch);
+            // $curl_info = curl_getinfo($ch);var_dump($curl_info);
+            curl_close($ch);
         }
 
-        $queryStringSorted = substr($queryStringSorted, 0, -1);
-
-        return $explodeResult[0] . '?' . $queryStringSorted;
+        return $response;
     }
-
- 
 
 
 }
