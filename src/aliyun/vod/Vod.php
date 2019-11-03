@@ -36,6 +36,28 @@ class Vod extends Component
 
 
     /**
+     * 批量删除完整视频
+     * @param array $videoIds
+     * @return string
+     */
+    public function deleteVideo($videoIds = [])
+    {
+        $apiParams = $this->pubParams();
+
+        $apiParams['Action']      = 'DeleteVideo';
+        $apiParams['VideoIds']    = implode(",", $videoIds);
+
+        // 签名结果串。
+        $apiParams['Signature']   = $this->computeSignature($apiParams, $this->accessSecret);
+
+        $uri = self::VOD_HOST_SH . '?' . http_build_query($apiParams);
+
+        $response = $this->curlContents($uri);
+
+        return $response;
+    }
+
+    /**
      * 通过视频ID批量获取视频信息
      * @param array $videoIds 视频ID列表。多个用逗号分隔，最多支持20个。
      * @return string
@@ -261,12 +283,12 @@ class Vod extends Component
         $apiParams['Action']      = 'CreateUploadVideo';
         $apiParams['Title']       = $title;
         $apiParams['FileName']    = $fileName;
-        $apiParams['Description'] = $description;
-        $apiParams['CoverURL']    = $coverURL;
-        if (intval($catId) !== 0) {
-            $apiParams['CateId']  = intval($catId);
-        }
-        $apiParams['Tags']        = empty($tags) ? '' : implode(",", $tags);
+
+        $coverURL    === '' ?  : $apiParams['CoverURL']    = $coverURL;
+        $description === '' ?  : $apiParams['Description'] = $description;
+        $catId       === 0  ?  : $apiParams['CateId']      = intval($catId);
+        empty($tags)        ?  : $apiParams['Tags']        = implode(",", $tags);
+
 
         // 签名结果串。
         $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
