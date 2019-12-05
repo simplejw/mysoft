@@ -341,7 +341,7 @@ class Vod extends Component
         $apiParams['Action']           = 'GetVideoPlayAuth';
         $apiParams['VideoId']          = $videoId;
         // 播放凭证过期时间。取值范围：100~3000。
-        $apiParams['AuthInfoTimeout']  = 100;
+        $apiParams['AuthInfoTimeout']  = 600;
         // 签名结果串。
         $apiParams['Signature']        = $this->computeSignature($apiParams, $this->accessSecret);
 
