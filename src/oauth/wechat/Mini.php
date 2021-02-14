@@ -6,7 +6,6 @@ use yii\base\Component;
 use yii\web\UnauthorizedHttpException;
 use yii\helpers\Json;
 
-
 class Mini extends Component
 {
     public $appID; //web.php
@@ -16,70 +15,77 @@ class Mini extends Component
     const ATURL = 'https://api.weixin.qq.com/cgi-bin/token';
 
     public function init()
-	{
+    {
 
     }
 
+    /**
+     * 获取小程序全局唯一后台接口调用凭据（access_token）
+     */
     public function getAccessToken()
     {
         $key = 'access_token';
-        $result = Yii::$app->cache->get($key);
+        $cacheData = Yii::$app->cache->get($key);
 
-        if ( empty($result) )
-        {
-            $params = [];
-			$params['grant_type'] = 'client_credential';
-			$params['appid'] = $this->appID;
-            $params['secret'] = $this->appSecret;
+        if ($cacheData === false) {
+            $params = [
+                'appid'      => $this->appID,
+                'secret'     => $this->appSecret,
+                'grant_type' => 'client_credential',
+            ];
+            $url = $this->buildUrl(self::ATURL, $params);
+            $response = $this->curlContents($url);
+            $cacheData = Json::decode($response);
 
-            $url = $this->buildUrl(Wechat::ATURL, $params);
-
-			$token = $this->curlContents($url);
-            $result = Json::decode($token);
-
-            if (is_array($result) && isset($result['errcode']))
-			{
-				throw new UnauthorizedHttpException('wechat login accesstoken failed ' . $result['errcode'] . ' ' . $result['errmsg']);
+            if (isset($cacheData['errcode'])) {
+                throw new UnauthorizedHttpException('wechat login accesstoken failed ' . $cacheData['errcode'] . ' ' . $cacheData['errmsg']);
             }
 
-            $result['expires_in'] = intval($result['expires_in'] * 0.8);
-
-            Yii::$app->cache->set($key, $result, $result['expires_in']);
+            $cacheData['expires_in'] = intval($cacheData['expires_in'] * 0.8);
+            Yii::$app->cache->set($key, $cacheData, $cacheData['expires_in']);
         }
-
-        return $result['access_token'];
+        return $cacheData['access_token'];
     }
 
     /**
      * auth.code2Session登陆, 获取 open_id and session_key
+     * @see https://developers.weixin.qq.com/miniprogram/dev/api-backend/open-api/login/auth.code2Session.html
+     * @param int $memberId
      * @param string $jsCode
-     * @return array|mixed
+     * @return mixed|null
      * @throws UnauthorizedHttpException
      */
     public function codeTwoSession($jsCode = '')
     {
-        $params['appid'] = $this->appID;
-        $params['secret'] = $this->appSecret;
-        $params['js_code'] = $jsCode;
-        $params['grant_type'] = 'authorization_code';
-
-        $url = $this->buildUrl(Mini::CSHOST, $params);
-
-        $response = $this->curlContents($url);
-        $result = Json::decode($response);
-
-        if (is_array($result) && isset($result['errcode']))
-        {
-            throw new UnauthorizedHttpException('wechat login code2Session failed ' . $result['errcode'] . ' ' . $result['errmsg']);
+        if ($jsCode === '') {
+            throw new UnauthorizedHttpException();
         }
 
-        return $result;
+        $params = [
+            'appid'      => $this->appID,
+            'secret'     => $this->appSecret,
+            'js_code'    => $jsCode,
+            'grant_type' => 'authorization_code',
+        ];
+        $url = $this->buildUrl(self::CSHOST, $params);
+        $response = $this->curlContents($url);
+        $infoData = Json::decode($response);
+
+        if (isset($infoData['errcode'])) {
+            throw new UnauthorizedHttpException('wechat login accesstoken failed ' . $infoData['errcode'] . ' ' . $infoData['errmsg']);
+        }
+
+        $infoData['expires_in'] = intval($infoData['expires_in'] * 0.8);
+
+        return $infoData;
     }
 
-    protected function buildUrl($url, $params = array())
+    private function buildUrl($url, $params = array())
 	{
-		if ($params) $url .= '?' . http_build_query($params, null, '&');
-		return $url;
+	    if (!empty($params)) {
+            $url .= '?' . http_build_query($params, null, '&');
+        }
+        return $url;
     }
 
     /**
