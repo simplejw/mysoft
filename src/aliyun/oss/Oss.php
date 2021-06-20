@@ -8,6 +8,9 @@ namespace aliyun\oss;
 
 use yii\base\Component;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 
 class Oss extends Component
 {
@@ -22,14 +25,35 @@ class Oss extends Component
      * @param string $objectName
      * @return array
      */
-    public function putObject($objectName = '', $filePath = '')
+    public function putObject($objectName = '', $tmpFilePath = '', $contentType = '')
     {
-        $authHeader = $this->createHeaderAuth('PUT', $objectName);
-        $authHeader['Cache-Control'] = 'Cache-Control: ' . 'no-cache';
+//        $authHeader = $this->createHeaderAuth('PUT', $objectName);
+//        $authHeader['Cache-Control'] = 'Cache-Control: ' . 'no-cache';
 
-        $hostPath = $this->bucketHost() . $objectName;
+//        $hostPath = $this->bucketHost() . $objectName;
+//
+//        $response = $this->curlContents($hostPath, 'PUT', [$filePath], $authHeader);
+//        return $response;
+        $gmtDate = gmdate('D, d M Y H:i:s \G\M\T');
+        $headerSignature = $this->createHeaderSignature('PUT', $gmtDate, $objectName, '', $contentType);
+        $authorization = 'OSS ' . $this->accessKeyId . ':' . $headerSignature;
+        $headers = [
+            'Authorization' => $authorization,
+            'Date' => $gmtDate,
+            'Content-Type' => $contentType,
+        ];
+        $body = fopen($tmpFilePath, 'r');
 
-        $response = $this->curlContents($hostPath, 'PUT', [$filePath], $authHeader);
+        $options = [
+            'headers' => $headers,
+            'body' => $body,
+        ];
+
+        $client = new Client([
+            // Base URI is used with relative requests
+            'base_uri' => $this->bucketHost()
+        ]);
+        $response = $client->request('PUT', $objectName, $options);
 
         return $response;
     }
@@ -185,7 +209,7 @@ class Oss extends Component
             curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HEADER, true);
+//            curl_setopt($ch, CURLOPT_HEADER, true);
             curl_setopt($ch, CURLINFO_HEADER_OUT, true);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36');
@@ -204,7 +228,7 @@ class Oss extends Component
             }
 
             $response = curl_exec($ch);
-            // $curl_info = curl_getinfo($ch);var_dump($curl_info);
+//             $curl_info = curl_getinfo($ch);var_dump($curl_info);
             curl_close($ch);
         }
 
